@@ -7,44 +7,41 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-backend:
-    name: Test Backend
+  test-with-docker-compose:
+    name: Test Full Stack via Docker Compose
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Dependencies
+      - name: Create Temporary .env File
         run: |
-          cd backend
-          pip install -r requirements.txt
+          echo "MYSQL_ROOT_PASSWORD=booklog_project_password" > .env
+          echo "MYSQL_DATABASE=booklog_db" >> .env
+          echo "DATABASE_URL=mysql+pymysql://root:booklog_project_password@mysql-booklog:3306/booklog_db" >> .env
 
-      - name: Verify Backend Import
+      - name: Build and Start Containers
         run: |
-          cd backend
-          python -m py_compile main.py
+          docker compose up -d --build
 
-  test-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install & Build
+      - name: Wait for Services to become Healthy
         run: |
-          cd frontend
-          npm ci
-          npm run build
+          # Gives MySQL time to initialize and accept connections
+          sleep 15
+          docker compose ps
+
+      - name: Test Backend Health
+        run: |
+          # Verifies your FastAPI container is responding over HTTP
+          curl --fail http://localhost:8000/docs || curl --fail http://localhost:8000/
+
+      - name: Test Frontend
+        run: |
+          # Verifies your Frontend/Nginx container is responding
+          curl --fail http://localhost:3000 || curl --fail http://localhost:80
+
+      - name: Tear Down Docker Compose
+        if: always()
+        run: |
+          docker compose down -v
