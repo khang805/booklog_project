@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-with-docker-compose:
+  test-fullstack-docker:
     name: Test Full Stack via Docker Compose
     runs-on: ubuntu-latest
 
@@ -21,25 +21,33 @@ jobs:
           echo "MYSQL_DATABASE=booklog_db" >> .env
           echo "DATABASE_URL=mysql+pymysql://root:booklog_project_password@mysql-booklog:3306/booklog_db" >> .env
 
-      - name: Build and Start Containers
+      - name: Build and Start Docker Containers
         run: |
           docker compose up -d --build
 
-      - name: Wait for Services to become Healthy
+      - name: Wait for MySQL & Application Startup
         run: |
-          # Gives MySQL time to initialize and accept connections
+          # Gives MySQL time to satisfy healthcheck and allow backend/frontend to start
           sleep 15
           docker compose ps
 
-      - name: Test Backend Health
+      - name: Test Backend API
         run: |
-          # Verifies your FastAPI container is responding over HTTP
           curl --fail http://localhost:8000/docs || curl --fail http://localhost:8000/
 
-      - name: Test Frontend
+      - name: Test Frontend App
         run: |
-          # Verifies your Frontend/Nginx container is responding
-          curl --fail http://localhost:3000 || curl --fail http://localhost:80
+          curl --fail http://localhost:5173
+
+      - name: Debug Logs on Failure
+        if: failure()
+        run: |
+          echo "=== Container Status ==="
+          docker compose ps
+          echo "=== Backend Logs ==="
+          docker compose logs backend-app
+          echo "=== Frontend Logs ==="
+          docker compose logs frontend-app
 
       - name: Tear Down Docker Compose
         if: always()
