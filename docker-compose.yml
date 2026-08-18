@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  mysql-booklog:
+    image: mysql:8.0
+    container_name: mysql-booklog
+    environment:
+      MYSQL_ROOT_PASSWORD: booklog_project_password
+      MYSQL_DATABASE: booklog_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pbooklog_project_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend-app:
+    build: ./backend
+    container_name: backend-app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: "mysql+pymysql://root:booklog_project_password@mysql-booklog:3306/booklog_db"
+    depends_on:
+      mysql-booklog:
+        condition: service_healthy
+
+  frontend-app:
+    build: ./frontend
+    container_name: frontend-app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend-app
+
+volumes:
+  mysql_data:

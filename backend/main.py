@@ -7,18 +7,18 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from dotenv import load_dotenv
 
-# Load environment variables from the parent or current directory
 load_dotenv("../.env")
 
-# Read database credentials securely from environment variables
-DB_USER = "root"
-DB_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD")
-DB_NAME = os.getenv("MYSQL_DATABASE")
-DB_HOST = "localhost"
-DB_PORT = "3306"
+# Reads DATABASE_URL passed by Docker, or falls back to 'mysql-booklog' host
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Construct the MySQL connection URL
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+if not DATABASE_URL:
+    DB_USER = "root"
+    DB_PASSWORD = os.getenv("MYSQL_ROOT_PASSWORD")
+    DB_NAME = os.getenv("MYSQL_DATABASE", "booklog_db")
+    DB_HOST = os.getenv("DB_HOST", "mysql-booklog")  # Points to MySQL container
+    DB_PORT = os.getenv("DB_PORT", "3306")
+    DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -37,7 +37,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="BookLog API")
 
-# Enable CORS so your React frontend can talk to this backend later
+# Enable CORS so your React frontend can talk to this backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
