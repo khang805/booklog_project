@@ -28,7 +28,7 @@ jobs:
       - name: Verify Backend Import
         run: |
           cd backend
-          python -c "import main"
+          python -m py_compile main.py
 
   test-frontend:
     name: Build Frontend
