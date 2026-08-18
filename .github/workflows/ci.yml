@@ -28,7 +28,7 @@ jobs:
       - name: Wait for MySQL & Application Startup
         run: |
           # Gives MySQL time to satisfy healthcheck and allow backend/frontend to start
-          sleep 15
+          sleep 35
           docker compose ps
 
       - name: Test Backend API
